@@ -86,7 +86,9 @@ modelo_reg_logis.fit(X=data_peor_area >> select(_.worst_area), y=data_peor_area[
 # atravpes de la funcion modelo_reg_logis.predict_proba
 #en la ultima parte, "[:,1]" nos dice que solo nos quedemos con la columna que representa los puntos malignos
 data_peor_area = data_peor_area >> mutate(probabilidades_reg_logis = (modelo_reg_logis.predict_proba(data_peor_area >> select(_.worst_area)))[:,1])
-                         
+#modelo_reg_logis.predict_proba(data_peor_area>> select(_.worst_area)) es una tabla de dos columnas
+#la primera columnas [:,0] es la probabilidad de que esté en 0 (cancer benigno)
+#la segunda [:,1] es la probabilidad de pertenecer a 1 (cancer maligno)
 
 (ggplot(data = data_peor_area) +
     geom_point(mapping = aes(x="worst_area", y="diagnosis"),color="red") +
@@ -160,19 +162,22 @@ tupla_clase_prediccion(objetivos_reales, predicciones)[:20]
 
 
 #%%¿Cómo se valida una regresión?
+#Siempre que sea binaria una clasificacion hay que usar regresión logística
 
+#Verdadero positivos son los 1 que clasificamos bien
+#Le doy de comer las tablas
 def VP(clases_reales, predicciones):
     par_clase_prediccion = tupla_clase_prediccion(clases_reales, predicciones)
     return len([obs for obs in par_clase_prediccion if obs[0]==1 and obs[1]==1])
-
+#Verdadero negativo son los 0 que clasificamos bien
 def VN(clases_reales, predicciones):
     par_clase_prediccion = tupla_clase_prediccion(clases_reales, predicciones)
     return len([obs for obs in par_clase_prediccion if obs[0]==0 and obs[1]==0])
-    
+#Es un falso 1    
 def FP(clases_reales, predicciones):
     par_clase_prediccion = tupla_clase_prediccion(clases_reales, predicciones)
     return len([obs for obs in par_clase_prediccion if obs[0]==0 and obs[1]==1])
-
+#Es un falso 0
 def FN(clases_reales, predicciones):
     par_clase_prediccion = tupla_clase_prediccion(clases_reales, predicciones)
     return len([obs for obs in par_clase_prediccion if obs[0]==1 and obs[1]==0])
@@ -200,12 +205,17 @@ Falsos Negativos: {}
 ###############################################################################
 ''' 
 
-
+####### Exactitud =(VP+VN)/(VP+VN+FP+FN) ##### 
 '''Exactitud (accuracy)'''
 metrics.accuracy_score(objetivos_reales, predicciones)
+#La exactitud es una medida general de como se comporta el modelo, 
+#mide simplemente el porcentaje de casos que se han clasificado correctamente.
+
+
+###### Precisión = VP/(VP+FP)
+# La precisión indica la habilidad del modelo para clasificar como positivos los casos que son positivos.
 
 '''Precisión'''
-
 def precision(clases_reales, predicciones):
     vp = VP(clases_reales, predicciones)
     fp = FP(clases_reales, predicciones)
@@ -213,12 +223,17 @@ def precision(clases_reales, predicciones):
 
 precision(objetivos_reales, predicciones)
 
+####### Sensibilidad = (VP)/(VP+FN)
 '''Sensibilidad'''
-
+#La sensibilidad nos da una medida de la habilidad del modelo para encontrar todos los casos positivos. 
+#La sensibilidad se mide en función de una clase.
 metrics.recall_score(objetivos_reales, predicciones)
 
 '''Puntuación F1'''
-
+######## La puntuación F1 es una media ponderada entre la sensibilidad (que intenta obtener cuantos
+#  mas verdaderos positivos independientemente de los falsos positivos) y la precisión (que intenta
+# obtener solo verdaderos positivos que sean casos claros para limitar los falsos positivos).
 metrics.f1_score(objetivos_reales, predicciones)
 
+#El umbral lo vas a seleccionar a partir de la metrica que hayas elegido para el modelo
 #%%

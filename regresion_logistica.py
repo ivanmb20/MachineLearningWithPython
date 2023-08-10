@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from siuba import *
 from siuba.dply.vector import * 
-
+from plotnine import *
 #%%
 
 os.chdir("C:/Users/IVAN MARTINEZ BRAVO/Desktop/RESPALDO IVAN 1 08 22/ESCRITORIOO/SciData Courses\Machine_Learning23")
@@ -237,3 +237,48 @@ metrics.f1_score(objetivos_reales, predicciones)
 
 #El umbral lo vas a seleccionar a partir de la metrica que hayas elegido para el modelo
 #%%
+
+pd.DataFrame({"exactitud":[metrics.accuracy_score(objetivos_reales, predicciones)],
+ "precision":[precision(objetivos_reales, predicciones)],
+ "sensibilidad":[metrics.recall_score(objetivos_reales, predicciones)],
+ "F1":[metrics.f1_score(objetivos_reales, predicciones)]
+})
+
+
+#%%
+#Aqui yo puedo cambiar el umbral a mi gusto
+def proba_a_etiqueta(predicciones_probabilidades,umbral=0.5):
+    predicciones = np.zeros([len(predicciones_probabilidades), ])
+    predicciones[predicciones_probabilidades[:,1]>=umbral] = 1
+    return predicciones
+#Cuando no das el umbral, automaticamente se entiende que es 0.5
+proba_a_etiqueta(predicciones_probabilidades)
+
+
+#%%
+
+def evaluar_umbral(umbral):
+    predicciones_en_umbral = proba_a_etiqueta(predicciones_probabilidades, umbral)
+    precision_umbral = precision(objetivos_reales, predicciones_en_umbral)
+    sensibilidad_umbral = metrics.recall_score(objetivos_reales, predicciones_en_umbral)
+    F1_umbral = metrics.f1_score(objetivos_reales, predicciones_en_umbral)
+    return (umbral,precision_umbral, sensibilidad_umbral, F1_umbral)
+
+#%%
+umbrales = np.linspace(0., 1., 1000)
+#Calculamos los umbrales para cada punto en umbrales
+evaluaciones = pd.DataFrame([evaluar_umbral(x) for x in umbrales],
+                            columns = ["umbral","precision","sensibilidad","F1"])
+
+#%%
+
+(ggplot(data = evaluaciones) +
+    geom_point(mapping=aes(x="sensibilidad",y="precision",color="umbral"),size=0.1)
+)
+#El criterio F1 es mas usado porque el F1 te combina la sensibilidad como la precisión
+(ggplot(data = evaluaciones) +
+    geom_point(mapping=aes(x="umbral",y="F1"),size=0.1)
+)
+#filter lo que hace es devolverme filas
+#Devuelveme las filas en donde F1 alcance su valor máximo
+evaluaciones >> filter(_.F1 == _.F1.max())
